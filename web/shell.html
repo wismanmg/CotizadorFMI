@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador FMI — Panorama Outsourcing</title>
+<style>
+  :root{ --azul:#1F3864; --azul2:#5B7DB1; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;background:#EEF1F5;color:#222;}
+  .app{display:flex;align-items:flex-start;}
+  .editor{width:420px;min-width:420px;height:100vh;overflow-y:auto;background:#fff;
+          border-right:2px solid #cdd4dd;padding:0 16px 60px;position:sticky;top:0;}
+  .preview{flex:1;padding:20px;display:flex;flex-direction:column;align-items:center;gap:24px;}
+  h1.tit{font-size:17px;color:var(--azul);margin:10px 0 0;}
+  .sub{font-size:11px;color:#667;margin-bottom:10px;}
+  .grp{border:1px solid #e2e6ec;border-radius:8px;padding:10px 12px;margin-bottom:11px;}
+  .grp h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--azul);
+          margin:0 0 8px;border-bottom:1px solid #eef;padding-bottom:4px;}
+  label{display:block;font-size:11px;color:#556;margin:6px 0 2px;font-weight:bold;}
+  input,textarea{width:100%;font-size:12px;padding:5px 7px;border:1px solid #c7ccd4;
+          border-radius:5px;font-family:inherit;}
+  textarea{resize:vertical;min-height:36px;}
+  .row2{display:flex;gap:8px;}.row2>div{flex:1;}
+  table.items{width:100%;border-collapse:collapse;}
+  table.items th{font-size:9.5px;color:#667;text-align:left;padding:2px;font-weight:bold;}
+  table.items td{padding:1px;}
+  table.items input{padding:4px 5px;font-size:11px;}
+  button{cursor:pointer;font-family:inherit;}
+  .btn{background:var(--azul);color:#fff;border:none;border-radius:6px;padding:8px 12px;
+       font-size:12px;font-weight:bold;}
+  .btn:hover{background:#152742;}
+  .btn.sec{background:var(--azul2);}.btn.sec:hover{background:#3f5f92;}
+  .btn.gris{background:#7A7A7A;}.btn.gris:hover{background:#5e5e5e;}
+  .btn.x{background:#C0392B;padding:5px 9px;}.btn.x:hover{background:#922B21;}
+  .btn.big{width:100%;padding:11px;font-size:13.5px;margin-top:5px;}
+  .btnline{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .hint{font-size:10px;color:#889;margin-top:5px;line-height:1.45;}
+  .toolbar{position:sticky;top:0;z-index:5;background:#fff;padding:10px 0;
+           border-bottom:1px solid #eef;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;}
+  .venta-td{font-size:11px;color:#1a7a3a;font-weight:bold;text-align:right;white-space:nowrap;}
+
+  /* ---------- HOJA: replica exacta del Excel ---------- */
+  .hoja{background:#fff;box-shadow:0 3px 16px rgba(30,40,70,.18);
+        width:210mm;min-height:297mm;padding:6mm;}
+  table.xl{border-collapse:collapse;table-layout:fixed;}
+  table.xl td{padding:0 1.5px;line-height:1.1;}
+  .hoja img.logo{max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto;}
+  .cfirma{position:relative;}
+  .cfirma img.mini{position:absolute;top:2%;left:2%;width:26%;object-fit:contain;}
+  .cfirma img.fi{max-width:92%;max-height:92%;object-fit:contain;display:block;margin:0 auto;}
+
+  /* ---------- IMPRESION ---------- */
+  @media print{
+    @page{ size:A4 portrait; margin:6mm; }
+    html,body{background:#fff !important;}
+    /* CLAVE: sin esto Chrome NO imprime los colores de fondo */
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .editor,.toolbar,.noprint{display:none !important;}
+    .preview{padding:0 !important;gap:0 !important;display:block !important;}
+    /* min-height fijo generaba una pagina en blanco al final */
+    .hoja{width:auto !important;min-height:0 !important;height:auto !important;
+          box-shadow:none !important;margin:0 !important;padding:0 !important;
+          page-break-after:always;overflow:hidden;}
+    .hoja:last-of-type{page-break-after:auto !important;}
+    body.solo-coti .cotizacion,body.solo-sus .sustento{page-break-after:auto !important;}
+    body.solo-coti .sustento{display:none !important;}
+    body.solo-sus  .cotizacion{display:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== EDITOR ===================== -->
+  <div class="editor">
+    <div class="toolbar">
+      <button class="btn" onclick="imprimir('coti')">🖨 PDF Cotización</button>
+      <button class="btn sec" onclick="imprimir('sus')">🖨 PDF Sustento</button>
+      <button class="btn gris" onclick="imprimir('ambos')">🖨 Ambos</button>
+    </div>
+    <h1 class="tit">Cotizador FMI</h1>
+    <div class="sub">Panorama Outsourcing · versión web</div>
+
+    <div class="grp">
+      <h2>1 · Datos generales</h2>
+      <label>N° Cotización</label>
+      <div class="row2">
+        <input id="i_num">
+        <button class="btn sec" style="flex:.55" onclick="avanzarNumero()">N° siguiente ▸</button>
+      </div>
+      <label>Fecha</label><input id="i_fecha">
+      <label>Cliente</label><input id="i_cli" placeholder="Razón social del cliente">
+      <label>Contacto</label><input id="i_con">
+      <label>Asunto</label><textarea id="i_asu" placeholder="Descripción del servicio"></textarea>
+      <div class="row2">
+        <div><label>N° Ticket / Solicitud</label><input id="i_tick" value="Según Requerimiento"></div>
+        <div><label>Sede / Local</label><input id="i_sede"></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>2 · Proveedor</h2>
+      <label>Proveedor</label><input id="i_prov" placeholder="Nombre del proveedor">
+      <div class="row2">
+        <div><label>RUC</label><input id="i_ruc"></div>
+        <div><label>N° cot. proveedor</label><input id="i_numprov"></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>3 · Líneas de la cotización</h2>
+      <table class="items">
+        <thead><tr>
+          <th style="width:46%">Descripción</th><th>U.M.</th><th>Cant.</th>
+          <th>Costo prov.</th><th>Venta</th><th></th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+      <div class="btnline">
+        <button class="btn sec" onclick="addLinea()">＋ Línea</button>
+        <button class="btn sec" onclick="addSCTR()">＋ SCTR / EPPS / traslado</button>
+      </div>
+      <div class="hint">Las líneas del proveedor cuentan como <b>gasto</b> (para la utilidad
+        del Sustento). La de SCTR/EPPS es venta pero <b>no</b> gasto.</div>
+    </div>
+
+    <div class="grp">
+      <h2>4 · Cálculo</h2>
+      <div class="row2">
+        <div><label>Margen (%)</label><input id="i_margen" type="number" step="0.5" value="15"></div>
+        <div><label>IGV (%)</label><input id="i_igv" type="number" step="1" value="18"></div>
+      </div>
+      <div class="hint">Venta = costo ÷ (1 − margen). Ej: 755 ÷ 0.85 = <b>888.24</b></div>
+    </div>
+
+    <div class="grp">
+      <h2>5 · Imágenes (opcional)</h2>
+      <label>Logo de empresa</label>
+      <input type="file" accept="image/*" onchange="cargarImg(event,'logo')">
+      <label>Logo de firma</label>
+      <input type="file" accept="image/*" onchange="cargarImg(event,'firma')">
+      <div class="hint">Si no cargás nada, se usan el logo y la firma originales.</div>
+    </div>
+
+    <button class="btn big" onclick="imprimir('coti')">🖨 Generar PDF Cotización</button>
+    <button class="btn big sec" onclick="imprimir('sus')">🖨 Generar PDF Sustento</button>
+    <div class="hint" style="margin-top:8px">En la ventana de impresión: <b>Destino</b> →
+      <b>“Guardar como PDF”</b>. Verificá que <b>“Gráficos de fondo”</b> esté tildado
+      (en “Más configuraciones”) para que salgan los colores.</div>
+  </div>
+
+  <!-- ===================== DOCUMENTOS ===================== -->
+  <div class="preview">
+    <div class="hoja cotizacion"><!--COTI--></div>
+    <div class="hoja sustento"><!--SUS--></div>
+  </div>
+</div>
+
+<script>
+const DIAS=['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const $=id=>document.getElementById(id);
+const LOGO='__LOGO__', FIRMA='__FIRMA__';
+let LOGO_ACT=LOGO, FIRMA_ACT=FIRMA;   // pueden cambiar si la usuaria carga las suyas
+
+let lineas=[], filaTpl=null, filaIni=null, tbodyCoti=null;
+
+function num(v){const x=parseFloat(String(v).replace(/,/g,'').trim());return isNaN(x)?0:x;}
+function nfmt(n){return (Math.round(n*100)/100).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function money(n){return 'S/. '+nfmt(n);}
+/* formato contable de Excel: el simbolo pegado a la izquierda y el numero a la derecha */
+function moneyHTML(n){return '<span style="float:left">S/.</span>'+nfmt(n);}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function txt(id,v){const e=$(id); if(e) e.textContent=v;}
+function txtm(id,n){const e=$(id); if(e) e.innerHTML=moneyHTML(n);}
+function fechaLarga(d){return DIAS[(d.getDay()+6)%7]+', '+d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear();}
+function mesDe(t){t=(t||'').toLowerCase();for(const m of MESES){if(t.includes(m.toLowerCase()))return m;}return '';}
+
+/* ---------- correlativo ---------- */
+const LS='cotizadorfmi_web';
+function cfg(){try{return JSON.parse(localStorage.getItem(LS))||{};}catch(e){return{};}}
+function saveCfg(o){localStorage.setItem(LS,JSON.stringify(Object.assign(cfg(),o)));}
+function fmtNum(n){return 'FMI - '+String(n).padStart(4,'0')+'-26';}
+function avanzarNumero(){const p=(cfg().prox||251)+1;saveCfg({prox:p});$('i_num').value=fmtNum(p);render();}
+
+/* ---------- lineas ---------- */
+function addLinea(desc='',um='UND',cant=1,costo='',gasto=true){
+  lineas.push({desc,um,cant,costo,gasto});pintar();render();
+}
+function addSCTR(){addLinea('SCTR, EPPS y traslado de herramientas.','GLB',1,'',false);}
+function delLinea(i){lineas.splice(i,1);pintar();render();}
+function upd(i,k,v){lineas[i][k]=v;render();}
+function pintar(){
+  const tb=$('tb');tb.innerHTML='';
+  lineas.forEach((l,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td><input value="'+esc(l.desc)+'" oninput="upd('+i+',\'desc\',this.value)"></td>'+
+      '<td><input style="width:40px" value="'+esc(l.um)+'" oninput="upd('+i+',\'um\',this.value)"></td>'+
+      '<td><input style="width:40px" value="'+esc(String(l.cant))+'" oninput="upd('+i+',\'cant\',this.value)"></td>'+
+      '<td><input style="width:64px" value="'+esc(String(l.costo))+'" oninput="upd('+i+',\'costo\',this.value)"></td>'+
+      '<td class="venta-td" id="v'+i+'"></td>'+
+      '<td><button class="btn x" onclick="delLinea('+i+')">✕</button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- imagenes ---------- */
+function ponerImg(cellId,src,cls){
+  const c=$(cellId); if(!c) return;
+  c.innerHTML='<img class="'+cls+'" src="'+src+'">';
+}
+function cargarImg(ev,cual){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(cual==='logo'){LOGO_ACT=e.target.result;
+      ponerImg('c_logo',LOGO_ACT,'logo');ponerImg('s_logo',LOGO_ACT,'logo');ponerFirma(FIRMA_ACT);}
+    else{FIRMA_ACT=e.target.result;ponerFirma(FIRMA_ACT);}
+  };
+  r.readAsDataURL(f);
+}
+/* el recuadro de firma lleva el logo chico arriba-izquierda + la firma manuscrita */
+function ponerFirma(src){
+  ['c_firma','s_firma'].forEach(id=>{const c=$(id);if(c){c.classList.add('cfirma');
+    c.innerHTML='<img class="mini" src="'+LOGO_ACT+'"><img class="fi" src="'+src+'">';}});
+}
+
+/* ---------- render ---------- */
+function render(){
+  const margen=num($('i_margen').value)/100, igv=num($('i_igv').value)/100;
+  const factor=(1-margen)||1;
+  const asunto=$('i_asu').value, cliente=$('i_cli').value, fecha=$('i_fecha').value;
+
+  txt('c_fecha',fecha); txt('c_cli',cliente); txt('c_con',$('i_con').value);
+  txt('c_asu',asunto); txt('c_tick',$('i_tick').value); txt('c_num',$('i_num').value);
+  txt('c_grupo',asunto);
+
+  /* --- filas de items en la hoja --- */
+  const validas=lineas.filter(l=>l.desc||l.costo!=='');
+  // borra las filas de items previas
+  tbodyCoti.querySelectorAll('tr.item-row').forEach(tr=>tr.remove());
+  let sub=0,gasto=0;
+  const ref=tbodyCoti.querySelector('tr[data-fila="'+filaIni+'"]');
+  validas.forEach((l,i)=>{
+    const costo=num(l.costo),cant=num(l.cant)||0;
+    const vu=costo/factor, parcial=vu*cant;
+    sub+=parcial; if(l.gasto) gasto+=costo*cant;
+    const tr=filaTpl.cloneNode(true);
+    tr.classList.add('item-row'); tr.removeAttribute('data-fila');
+    const td=tr.querySelectorAll('td');
+    // A=item  B=desc  I=um  J=cant  K=precio  L=parcial  M=subtotal
+    td[0].textContent='01.'+String(i+1).padStart(2,'0');
+    td[1].textContent=l.desc;
+    td[2].textContent=l.um;
+    td[3].textContent=l.cant;
+    td[4].innerHTML=moneyHTML(vu);
+    td[5].innerHTML=moneyHTML(parcial);
+    td[6].innerHTML=moneyHTML(parcial);
+    // conserva el alto de la plantilla como minimo (crece si el texto es largo)
+    tbodyCoti.insertBefore(tr,ref);
+  });
+  // el indice de venta en el editor
+  lineas.forEach((l,i)=>{const e=$('v'+i);
+    if(e) e.textContent=(l.desc||l.costo!=='')?money(num(l.costo)/factor):'';});
+
+  const igvm=sub*igv, total=sub+igvm;
+  txtm('c_gsub',sub); txtm('c_cd',sub);
+  txt('c_pigv',Math.round(igv*100)+'%'); txtm('c_igv',igvm); txtm('c_tot',total);
+
+  /* --- sustento --- */
+  txt('s_fecha',fecha); txt('s_num',$('i_num').value); txt('s_mes',mesDe(fecha));
+  txt('s_mot',asunto); txt('s_prov',$('i_prov').value);
+  txt('s_cli',cliente); txt('s_sede',$('i_sede').value||asunto);
+  txtm('s_g1',gasto); txtm('s_g2',gasto*igv); txtm('s_g3',gasto*(1+igv));
+  txtm('s_v1',sub);   txtm('s_v2',igvm);      txtm('s_v3',total);
+  txtm('r_v1',sub);   txtm('r_v2',total);
+  txtm('r_g1',gasto); txtm('r_g2',gasto*(1+igv));
+  const uti=sub-gasto;
+  txtm('r_u1',uti);   txtm('r_u2',uti*(1+igv));
+  txt('r_pct',sub?(uti/sub*100).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'%':'');
+}
+
+/* ---------- imprimir ---------- */
+function imprimir(cual){
+  document.body.className=cual==='coti'?'solo-coti':cual==='sus'?'solo-sus':'';
+  setTimeout(()=>{window.print();setTimeout(()=>document.body.className='',400);},60);
+}
+
+/* ---------- init ---------- */
+function init(){
+  // localizar la tabla de la cotizacion y la fila plantilla de items
+  const hoja=document.querySelector('.cotizacion table.xl');
+  tbodyCoti=hoja.querySelector('tbody');
+  const primera=tbodyCoti.querySelector('tr[data-fila="15"]');
+  filaTpl=primera.cloneNode(true);
+  filaTpl.querySelectorAll('td').forEach(td=>td.textContent='');
+  // las filas 15 y 16 de la plantilla se ocultan (son el molde)
+  ['15','16'].forEach(f=>{const tr=tbodyCoti.querySelector('tr[data-fila="'+f+'"]');
+    if(tr) tr.style.display='none';});
+  filaIni=17;   // insertamos antes de la fila de COSTO DIRECTO
+
+  ponerImg('c_logo',LOGO,'logo'); ponerImg('s_logo',LOGO,'logo'); ponerFirma(FIRMA);
+
+  const c=cfg();
+  $('i_num').value=fmtNum(c.prox||251);
+  $('i_fecha').value=fechaLarga(new Date());
+  ['i_num','i_fecha','i_cli','i_con','i_asu','i_tick','i_sede','i_prov','i_ruc','i_numprov','i_margen','i_igv']
+    .forEach(id=>$(id).addEventListener('input',render));
+  addLinea();
+  render();
+}
+init();
+</script>
+</body>
+</html>

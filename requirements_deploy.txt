@@ -4,5 +4,5 @@ pdfplumber>=0.11
 reportlab>=4.0
 pillow>=10.0
 pypdfium2>=4.0
-rapidocr-onnxruntime>=1.3
+rapidocr-onnxruntime
 openpyxl>=3.1

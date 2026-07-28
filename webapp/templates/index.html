@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador FMI — Panorama Outsourcing</title>
+<style>
+  :root{ --azul:#1F3864; --azul2:#5B7DB1; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;background:#EEF1F5;color:#222;}
+  .app{display:block;}
+  /* el editor usa TODO el ancho de la pantalla; los documentos solo en vista previa */
+  .editor{width:100%;min-height:100vh;background:#fff;padding:0 28px 60px;}
+  .preview{display:none;flex:1;padding:24px;flex-direction:column;align-items:center;gap:28px;}
+  /* rejilla: datos a la izquierda (fija) y las lineas a la derecha (se estira) */
+  .cols{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:20px;align-items:start;}
+  @media (max-width:1100px){ .cols{grid-template-columns:1fr;} }
+  h1.tit{font-size:22px;color:var(--azul);margin:12px 0 0;}
+  .sub{font-size:13px;color:#667;margin-bottom:14px;}
+  .grp{border:1px solid #e2e6ec;border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .grp h2{font-size:14px;text-transform:uppercase;letter-spacing:.4px;color:var(--azul);
+          margin:0 0 10px;border-bottom:1px solid #eef;padding-bottom:6px;}
+  label{display:block;font-size:13px;color:#445;margin:9px 0 3px;font-weight:bold;}
+  input,textarea{width:100%;font-size:14px;padding:8px 10px;border:1px solid #c7ccd4;
+          border-radius:6px;font-family:inherit;}
+  input[type=file]{font-size:13px;padding:6px;}
+  textarea{resize:vertical;min-height:48px;}
+  .row2{display:flex;gap:10px;}.row2>div{flex:1;}
+  table.items{width:100%;border-collapse:collapse;}
+  table.items th{font-size:12px;color:#556;text-align:left;padding:3px 4px;font-weight:bold;}
+  table.items td{padding:3px 4px;}
+  table.items input{padding:7px 8px;font-size:13.5px;width:100%;}
+  /* la descripcion se estira; el resto queda fijo */
+  table.items th.c-um,table.items td.c-um{width:80px;}
+  table.items th.c-cant,table.items td.c-cant{width:80px;}
+  table.items th.c-costo,table.items td.c-costo{width:120px;}
+  table.items th.c-venta,table.items td.c-venta{width:130px;text-align:right;}
+  table.items th.c-del,table.items td.c-del{width:52px;}
+  button{cursor:pointer;font-family:inherit;}
+  .btn{background:var(--azul);color:#fff;border:none;border-radius:7px;padding:11px 16px;
+       font-size:14px;font-weight:bold;}
+  .btn:hover{background:#152742;}
+  .btn.sec{background:var(--azul2);}.btn.sec:hover{background:#3f5f92;}
+  .btn.gris{background:#7A7A7A;}.btn.gris:hover{background:#5e5e5e;}
+  .btn.verde{background:#1F7A45;}.btn.verde:hover{background:#155c33;}
+  .btn.x{background:#C0392B;padding:7px 11px;font-size:13px;}.btn.x:hover{background:#922B21;}
+  .btn.xls{background:#1D6F42;}.btn.xls:hover{background:#14512f;}
+  .tag{font-size:12.5px;font-weight:bold;color:#556;letter-spacing:.3px;}
+  .tag.verde-t{color:#1D6F42;}
+  .sep{display:inline-block;width:1px;height:26px;background:#dfe3ea;margin:0 6px;}
+  .btn.big{width:100%;padding:14px;font-size:16px;margin-top:8px;}
+  .btnline{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .hint{font-size:12px;color:#7c8494;margin-top:7px;line-height:1.5;}
+  .toolbar{position:sticky;top:0;z-index:5;background:#fff;padding:12px 0;
+           border-bottom:1px solid #eef;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;
+           align-items:center;}
+  .venta-td{font-size:13px;color:#1a7a3a;font-weight:bold;text-align:right;white-space:nowrap;}
+  #estado{font-size:12px;color:#8a93a0;}
+
+  /* ---------- ventana de logo y firma ---------- */
+  .modal{display:none;position:fixed;inset:0;background:rgba(15,25,45,.55);z-index:100;
+         align-items:center;justify-content:center;}
+  .modal.abierto{display:flex;}
+  .modal-box{background:#fff;border-radius:12px;padding:24px 28px;width:440px;max-width:92vw;
+             box-shadow:0 12px 40px rgba(0,0,0,.3);}
+  .modal-box h3{margin:0 0 16px;color:var(--azul);font-size:19px;}
+
+  /* ---------- modo VISTA PREVIA (pantalla completa, sin imprimir) ---------- */
+  .barra-prev{display:none;position:fixed;top:0;left:0;right:0;z-index:50;
+       background:var(--azul);color:#fff;padding:10px 18px;align-items:center;gap:10px;
+       box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  .barra-prev .tt{font-size:15px;font-weight:bold;margin-right:auto;}
+  .barra-prev .btn{background:#fff;color:var(--azul);}
+  .barra-prev .btn:hover{background:#dfe6f2;}
+  .barra-prev .btn.o{background:transparent;color:#fff;border:1.5px solid #fff;}
+  .barra-prev .btn.o:hover{background:rgba(255,255,255,.15);}
+  body.modo-prev .editor{display:none;}
+  body.modo-prev .barra-prev{display:flex;}
+  body.modo-prev .preview{display:flex;padding:76px 20px 40px;}
+  /* al imprimir hay que mostrar la hoja aunque el editor la tenga oculta */
+  @media print{ .preview{display:block !important;} }
+  body.modo-prev.ver-coti .sustento{display:none;}
+  body.modo-prev.ver-sus .cotizacion{display:none;}
+
+  /* ---------- HOJA: calcada del Excel ---------- */
+  .hoja{background:#fff;box-shadow:0 3px 16px rgba(30,40,70,.18);
+        width:210mm;min-height:297mm;padding:6mm;}
+  table.xl{border-collapse:collapse;table-layout:fixed;}
+  table.xl td{padding:0 1.5px;line-height:1.1;}
+  .hoja img.logo{max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto;}
+  .cfirma{position:relative;text-align:center;}
+  .cfirma img.fi{max-width:62%;max-height:78%;object-fit:contain;display:block;margin:0 auto;}
+
+  /* ---------- IMPRESION ---------- */
+  @media print{
+    @page{ size:A4 portrait; margin:6mm; }
+    html,body{background:#fff !important;}
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    .editor,.toolbar,.noprint{display:none !important;}
+    .preview{padding:0 !important;gap:0 !important;display:block !important;}
+    .hoja{width:auto !important;min-height:0 !important;height:auto !important;
+          box-shadow:none !important;margin:0 !important;padding:0 !important;
+          page-break-after:always;overflow:hidden;}
+    .hoja:last-of-type{page-break-after:auto !important;}
+    body.solo-coti .sustento{display:none !important;}
+    body.solo-sus  .cotizacion{display:none !important;}
+    body.solo-coti .cotizacion,body.solo-sus .sustento{page-break-after:auto !important;}
+  }
+</style>
+</head>
+<body>
+<!-- barra que aparece solo en la vista previa -->
+<div class="barra-prev noprint">
+  <span class="tt" id="prev_titulo">Vista previa</span>
+  <button class="btn o" onclick="verOtro()">⇄ Ver el otro documento</button>
+  <button class="btn o" onclick="salirPreview()">← Volver a editar</button>
+  <button class="btn" onclick="descargar(docActual,'pdf')">⬇ PDF</button>
+  <button class="btn" onclick="descargar(docActual,'excel')">⬇ Excel</button>
+</div>
+
+<!-- ventana de logo y firma (se abre con el icono de arriba) -->
+<div class="modal noprint" id="modal_img" onclick="if(event.target===this)cerrarImagenes()">
+  <div class="modal-box">
+    <h3>🖼 Logo y firma</h3>
+    <label>Logo de empresa</label>
+    <input type="file" accept="image/*" onchange="cargarImg(event,'logo')">
+    <label style="margin-top:14px">Logo de firma</label>
+    <input type="file" accept="image/*" onchange="cargarImg(event,'firma')">
+    <div class="hint">Si no cargás nada, se usan el logo y la firma originales.</div>
+    <div style="text-align:right;margin-top:16px">
+      <button class="btn" onclick="cerrarImagenes()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- ===================== EDITOR ===================== -->
+  <div class="editor">
+    <div class="toolbar">
+      <span class="tag">📄 PDF</span>
+      <button class="btn" onclick="descargar('coti','pdf')">⬇ Cotización</button>
+      <button class="btn sec" onclick="descargar('sus','pdf')">⬇ Sustento</button>
+      <button class="btn gris" onclick="descargar('ambos','pdf')">⬇ Ambos</button>
+      <span class="sep"></span>
+      <span class="tag verde-t">📊 Excel</span>
+      <button class="btn xls" onclick="descargar('coti','excel')">⬇ Cotización</button>
+      <button class="btn xls" onclick="descargar('sus','excel')">⬇ Sustento</button>
+      <button class="btn xls" onclick="descargar('ambos','excel')">⬇ Ambos</button>
+      <span class="sep"></span>
+      <button class="btn verde" onclick="vistaPrevia('coti')" title="Ver antes de descargar">👁 Vista previa</button>
+      <button class="btn gris" onclick="abrirImagenes()" title="Cambiar logo o firma">🖼</button>
+      <span id="estado"></span>
+    </div>
+    <h1 class="tit">Cotizador FMI</h1>
+    <div class="sub">Panorama Outsourcing · app web (cálculo en Python)</div>
+
+    <div class="cols">
+    <div>
+    <div class="grp">
+      <h2>1 · Datos generales</h2>
+      <label>N° Cotización</label>
+      <div class="row2">
+        <input id="i_num" value="{{ numero }}">
+        <button class="btn sec" style="flex:.55" onclick="avanzarNumero()">N° siguiente ▸</button>
+      </div>
+      <label>Fecha</label><input id="i_fecha" value="{{ fecha }}">
+      <label>Cliente</label><input id="i_cli" placeholder="Razón social del cliente">
+      <label>Contacto</label><input id="i_con">
+      <label>Asunto</label><textarea id="i_asu" placeholder="Descripción del servicio"></textarea>
+      <div class="row2">
+        <div><label>N° Ticket / Solicitud</label><input id="i_tick" value="Según Requerimiento"></div>
+        <div><label>Sede / Local</label><input id="i_sede"></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>2 · Proveedor</h2>
+      <label>Cotización del proveedor (PDF)</label>
+      <input type="file" id="i_pdf" accept="application/pdf" onchange="leerPDF(event)">
+      <div id="pdf_estado" class="hint"></div>
+      <label>Proveedor</label><input id="i_prov" placeholder="Nombre del proveedor">
+      <div class="row2">
+        <div><label>RUC</label><input id="i_ruc"></div>
+        <div><label>N° cot. proveedor</label><input id="i_numprov"></div>
+      </div>
+      <div class="hint">Si el PDF es una foto o escaneo, se lee con <b>OCR</b>
+        (puede tardar unos segundos la primera vez). <b>Revisá siempre</b> las líneas.</div>
+    </div>
+
+    <div class="grp">
+      <h2>4 · Cálculo</h2>
+      <div class="row2">
+        <div><label>Margen (%)</label>
+          <input id="i_margen" type="number" step="0.5" value="{{ (cfg.margen*100)|round(1) }}"></div>
+        <div><label>IGV (%)</label>
+          <input id="i_igv" type="number" step="1" value="{{ (cfg.igv*100)|round(0)|int }}"></div>
+      </div>
+      <div class="hint">Venta = costo ÷ (1 − margen). Ej: 755 ÷ 0.85 = <b>888.24</b></div>
+    </div>
+    </div><div><!-- ===== columna derecha ===== -->
+
+    <div class="grp">
+      <h2>3 · Líneas de la cotización</h2>
+      <table class="items">
+        <thead><tr>
+          <th>Descripción</th><th class="c-um">U.M.</th><th class="c-cant">Cant.</th>
+          <th class="c-costo">Costo prov.</th><th class="c-venta">Venta</th><th class="c-del"></th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+      <div class="btnline">
+        <button class="btn sec" onclick="addLinea()">＋ Línea</button>
+        <button class="btn sec" onclick="addSCTR()">＋ SCTR / EPPS / traslado</button>
+      </div>
+      <div class="hint">Las líneas del proveedor cuentan como <b>gasto</b> (para la utilidad
+        del Sustento). La de SCTR/EPPS es venta pero <b>no</b> gasto.</div>
+    </div>
+
+    </div></div><!-- fin columnas -->
+  </div>
+
+  <!-- ===================== DOCUMENTOS ===================== -->
+  <div class="preview">
+    <div class="hoja cotizacion">{{ coti_html|safe }}</div>
+    <div class="hoja sustento">{{ sus_html|safe }}</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let LOGO_ACT='/doc/logo.png', FIRMA_ACT='/doc/firma.png';
+let lineas=[], filaTpl=null, tbodyCoti=null, timer=null;
+const FIRMA_NOMBRE={{ cfg.firma_nombre|tojson }}, FIRMA_CARGO={{ cfg.firma_cargo|tojson }};
+
+function nfmt(n){return (Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function moneyHTML(n){return '<span style="float:left">S/.</span>'+nfmt(n);}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function txt(id,v){const e=$(id); if(e) e.textContent=v;}
+function txtm(id,n){const e=$(id); if(e) e.innerHTML=moneyHTML(n);}
+
+/* ---------- lineas ---------- */
+function addLinea(desc='',um='UND',cant=1,costo='',gasto=true){
+  lineas.push({desc,um,cant,costo,gasto});pintar();render();
+}
+function addSCTR(){addLinea('SCTR, EPPS y traslado de herramientas.','GLB',1,'',false);}
+function delLinea(i){lineas.splice(i,1);pintar();render();}
+function upd(i,k,v){lineas[i][k]=v;render();}
+function pintar(){
+  const tb=$('tb');tb.innerHTML='';
+  lineas.forEach((l,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td><input value="'+esc(l.desc)+'" oninput="upd('+i+',\'desc\',this.value)"></td>'+
+      '<td class="c-um"><input value="'+esc(l.um)+'" oninput="upd('+i+',\'um\',this.value)"></td>'+
+      '<td class="c-cant"><input value="'+esc(String(l.cant))+'" oninput="upd('+i+',\'cant\',this.value)"></td>'+
+      '<td class="c-costo"><input value="'+esc(String(l.costo))+'" oninput="upd('+i+',\'costo\',this.value)"></td>'+
+      '<td class="c-venta venta-td" id="v'+i+'"></td>'+
+      '<td class="c-del"><button class="btn x" onclick="delLinea('+i+')">✕</button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- imagenes ---------- */
+function ponerImg(id,src,cls){const c=$(id);if(c)c.innerHTML='<img class="'+cls+'" src="'+src+'">';}
+function ponerFirma(){
+  ['c_firma','s_firma'].forEach(id=>{const c=$(id);if(c){c.classList.add('cfirma');
+    c.innerHTML='<img class="fi" src="'+FIRMA_ACT+'">';}});   // solo la firma, sin logo
+}
+function abrirImagenes(){ $('modal_img').classList.add('abierto'); }
+function cerrarImagenes(){ $('modal_img').classList.remove('abierto'); }
+
+function cargarImg(ev,cual){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(cual==='logo'){LOGO_ACT=e.target.result;
+      ponerImg('c_logo',LOGO_ACT,'logo');ponerImg('s_logo',LOGO_ACT,'logo');}
+    else{FIRMA_ACT=e.target.result;}
+    ponerFirma();
+  };
+  r.readAsDataURL(f);
+}
+
+/* ---------- leer el PDF del proveedor (lo procesa Python) ---------- */
+async function leerPDF(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const est=$('pdf_estado');
+  est.style.color='#1F3864';
+  est.innerHTML='⏳ Leyendo <b>'+esc(f.name)+'</b>… si es escaneado usa OCR y tarda un poco.';
+  const fd=new FormData(); fd.append('pdf',f);
+  try{
+    const r=await fetch('/api/leer-pdf',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!d.ok){ est.style.color='#C0392B'; est.textContent='⚠ '+(d.error||'No se pudo leer.'); return; }
+    if(d.proveedor && !$('i_prov').value) $('i_prov').value=d.proveedor;
+    if(d.ruc) $('i_ruc').value=d.ruc;
+    if(d.numero) $('i_numprov').value=d.numero;
+    if(d.lineas && d.lineas.length){
+      lineas=d.lineas.map(l=>({desc:l.desc,um:l.um,cant:l.cant,costo:l.costo,gasto:true}));
+      pintar();
+      est.style.color='#1a7a3a';
+      est.innerHTML='✓ Se cargaron <b>'+d.lineas.length+'</b> línea(s). '+
+        (d.total?'Total del PDF: S/. '+nfmt(d.total)+'. ':'')+'<b>Revisalas antes de generar.</b>';
+    }else{
+      est.style.color='#B7791F';
+      est.textContent='No se detectaron líneas automáticamente. Cargalas a mano.';
+    }
+    render();
+  }catch(e){ est.style.color='#C0392B'; est.textContent='⚠ Error de conexión con el servidor.'; }
+}
+
+/* ---------- correlativo (lo lleva el servidor) ---------- */
+async function avanzarNumero(){
+  try{
+    const r=await fetch('/api/correlativo',{method:'POST'});
+    const d=await r.json(); $('i_num').value=d.numero; render();
+  }catch(e){ $('estado').textContent='sin conexión con el servidor'; }
+}
+
+/* ---------- render: el calculo lo hace Python ---------- */
+function render(){ clearTimeout(timer); timer=setTimeout(pedirCalculo,120); }
+
+async function pedirCalculo(){
+  const datos={
+    margen:(parseFloat($('i_margen').value)||0)/100,
+    igv:(parseFloat($('i_igv').value)||0)/100,
+    lineas:lineas.map(l=>({desc:l.desc,um:l.um,cant:parseFloat(l.cant)||0,
+                           costo:parseFloat(String(l.costo).replace(/,/g,''))||0,gasto:l.gasto}))
+  };
+  let c;
+  try{
+    const r=await fetch('/api/calcular',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(datos)});
+    c=await r.json();
+    $('estado').textContent='calculado en el servidor ✓';
+  }catch(e){ $('estado').textContent='⚠ sin conexión con el servidor'; return; }
+  pintarDocumentos(c);
+}
+
+function pintarDocumentos(c){
+  const asunto=$('i_asu').value, cliente=$('i_cli').value, fecha=$('i_fecha').value;
+  /* --- cotizacion --- */
+  txt('c_fecha',fecha); txt('c_cli',cliente); txt('c_con',$('i_con').value);
+  txt('c_asu',asunto); txt('c_tick',$('i_tick').value); txt('c_num',$('i_num').value);
+  txt('c_grupo',asunto);
+
+  tbodyCoti.querySelectorAll('tr.item-row').forEach(tr=>tr.remove());
+  const ref=tbodyCoti.querySelector('tr[data-fila="17"]');
+  c.lineas.forEach(l=>{
+    const tr=filaTpl.cloneNode(true);
+    tr.classList.add('item-row'); tr.removeAttribute('data-fila');
+    const td=tr.querySelectorAll('td');
+    td[0].textContent=l.n; td[1].textContent=l.desc;
+    td[2].textContent=l.um; td[3].textContent=l.cant;
+    td[4].innerHTML=moneyHTML(l.unit);
+    td[5].innerHTML=moneyHTML(l.parcial);
+    td[6].innerHTML=moneyHTML(l.parcial);
+    tbodyCoti.insertBefore(tr,ref);
+  });
+  // venta por linea en el editor
+  let k=0;
+  lineas.forEach((l,i)=>{const e=$('v'+i); if(!e) return;
+    const usa=(l.desc||'').trim()||parseFloat(l.costo);
+    e.textContent = usa && c.lineas[k] ? 'S/. '+nfmt(c.lineas[k++].unit) : '';});
+
+  txtm('c_gsub',c.subtotal); txtm('c_cd',c.subtotal);
+  txt('c_pigv',c.igv_pct+'%'); txtm('c_igv',c.igv_monto); txtm('c_tot',c.total);
+
+  /* --- sustento --- */
+  txt('s_fecha',fecha); txt('s_num',$('i_num').value);
+  txt('s_mes',mesDe(fecha)); txt('s_mot',asunto); txt('s_prov',$('i_prov').value);
+  txt('s_cli',cliente); txt('s_sede',$('i_sede').value||asunto);
+  txtm('s_g1',c.gasto); txtm('s_g2',c.gasto_igv); txtm('s_g3',c.gasto_total);
+  txtm('s_v1',c.subtotal); txtm('s_v2',c.igv_monto); txtm('s_v3',c.total_sustento);
+  txtm('r_v1',c.subtotal); txtm('r_v2',c.total_sustento);
+  txtm('r_g1',c.gasto);    txtm('r_g2',c.gasto_total);
+  txtm('r_u1',c.utilidad); txtm('r_u2',c.utilidad_igv);
+  txt('r_pct',c.subtotal?nfmt(c.utilidad_pct)+'%':'');
+}
+
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function mesDe(t){t=(t||'').toLowerCase();for(const m of MESES){if(t.includes(m.toLowerCase()))return m;}return '';}
+
+/* ---------- descargar el PDF (lo arma Python, sin dialogo) ---------- */
+function datosActuales(){
+  return {
+    numero:$('i_num').value, fecha:$('i_fecha').value, mes:mesDe($('i_fecha').value),
+    cliente:$('i_cli').value, contacto:$('i_con').value, asunto:$('i_asu').value,
+    ticket:$('i_tick').value, sede:$('i_sede').value, proveedor:$('i_prov').value,
+    margen:(parseFloat($('i_margen').value)||0)/100,
+    igv:(parseFloat($('i_igv').value)||0)/100,
+    lineas:lineas.map(l=>({desc:l.desc,um:l.um,cant:parseFloat(l.cant)||0,
+      costo:parseFloat(String(l.costo).replace(/,/g,''))||0,gasto:l.gasto}))
+  };
+}
+
+async function descargar(cual, formato){
+  formato = formato || 'pdf';
+  const esXls = formato==='excel';
+  const est=$('estado');
+  est.style.color='#1F3864';
+  est.textContent = esXls ? '⏳ Generando el Excel… (abre Excel unos segundos)'
+                          : '⏳ Generando el PDF…';
+  try{
+    const d=datosActuales(); d.doc=cual;
+    const r=await fetch(esXls?'/api/excel':'/api/pdf',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    if(!r.ok){
+      let msg='No se pudo generar el archivo.';
+      try{ const j=await r.json(); if(j.error) msg=j.error; }catch(e){}
+      est.style.color='#C0392B'; est.textContent='⚠ '+msg; return;
+    }
+    const blob=await r.blob();
+    const nom=(r.headers.get('Content-Disposition')||'').match(/filename\*?=(?:UTF-8'')?"?([^\";]+)/);
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=nom?decodeURIComponent(nom[1]):('Cotizacion.'+(esXls?'xlsx':'pdf'));
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    est.style.color='#1a7a3a';
+    est.textContent = esXls ? '✓ Excel descargado' : '✓ PDF descargado';
+  }catch(e){ est.style.color='#C0392B'; est.textContent='⚠ Error de conexión.'; }
+}
+
+/* ---------- vista previa (NO imprime nada) ---------- */
+let docActual='coti';
+function vistaPrevia(cual){
+  docActual=cual;
+  document.body.className='modo-prev '+(cual==='sus'?'ver-sus':'ver-coti');
+  $('prev_titulo').textContent=(cual==='sus'?'Vista previa — Sustento de Gasto'
+                                            :'Vista previa — Cotización');
+  window.scrollTo(0,0);
+}
+function salirPreview(){ document.body.className=''; }
+function verOtro(){ vistaPrevia(docActual==='coti'?'sus':'coti'); }
+/* Esc = volver a editar */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if($('modal_img').classList.contains('abierto')) cerrarImagenes();
+  else if(document.body.classList.contains('modo-prev')) salirPreview();
+});
+
+/* ---------- init ---------- */
+function init(){
+  tbodyCoti=document.querySelector('.cotizacion table.xl tbody');
+  const primera=tbodyCoti.querySelector('tr[data-fila="15"]');
+  filaTpl=primera.cloneNode(true);
+  filaTpl.querySelectorAll('td').forEach(td=>td.textContent='');
+  ['15','16'].forEach(f=>{const tr=tbodyCoti.querySelector('tr[data-fila="'+f+'"]');
+    if(tr) tr.style.display='none';});
+
+  ponerImg('c_logo',LOGO_ACT,'logo'); ponerImg('s_logo',LOGO_ACT,'logo'); ponerFirma();
+  ['i_num','i_fecha','i_cli','i_con','i_asu','i_tick','i_sede','i_prov','i_ruc','i_numprov','i_margen','i_igv']
+    .forEach(id=>$(id).addEventListener('input',render));
+  addLinea();
+}
+init();
+</script>
+</body>
+</html>

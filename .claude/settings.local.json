@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python --version)",
+      "PowerShell(py --version)",
+      "PowerShell(python -c \"import openpyxl,pdfplumber,reportlab,customtkinter,PIL,pypdfium2; print\\('core ok'\\)\")",
+      "PowerShell(python -c \"import rapidocr_onnxruntime; print\\('ocr ok'\\)\")",
+      "PowerShell(python -c \"import win32com.client; print\\('pywin32 ok'\\)\")",
+      "PowerShell($env:PYTHONPATH=\"c:\\\\Users\\\\USUARIO\\\\Downloads\\\\Extraer_Datos_Milagros\\\\CotizadorFMI\"; python -c \"import cotizador.servicio, cotizador.extraer_pdf, cotizador.control, cotizador.gen_pdf; print\\('modulos del proyecto OK'\\)\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:8000/salud\" -UseBasicParsing -TimeoutSec 8; \"salud -> $\\($r.StatusCode\\) $\\($r.Content\\)\" } catch { \"ERROR: $\\($_.Exception.Message\\)\" }; try { $h = Invoke-WebRequest -Uri \"http://127.0.0.1:8000/\" -UseBasicParsing -TimeoutSec 10; \"index -> $\\($h.StatusCode\\), $\\($h.RawContentLength\\) bytes\" } catch { \"ERROR index: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri http://127.0.0.1:8000/ -UseBasicParsing -TimeoutSec 5; \"STATUS: $\\($r.StatusCode\\)  LEN: $\\($r.Content.Length\\)\" } catch { \"ERROR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(foreach \\($p in 4988,2676,23320\\) { try { $pr = Get-CimInstance Win32_Process -Filter \"ProcessId=$p\"; \"PID $p : $\\($pr.Name\\)`n   CMD: $\\($pr.CommandLine\\)`n   START: $\\($pr.CreationDate\\)\" } catch { \"PID $p : no encontrado\" } })",
+      "PowerShell(Start-Process \"http://localhost:8000\")",
+      "PowerShell(\"Abierto en el navegador predeterminado.\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri http://localhost:8000/ -UseBasicParsing -TimeoutSec 8; \"STATUS: $\\($r.StatusCode\\)  LEN: $\\($r.Content.Length\\)\" } catch { \"ERROR: $\\($_.Exception.Message\\)\" })"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+dist/
+dist_web/
+salidas/
+datos/
+__pycache__/
+*.pyc
+*.exe

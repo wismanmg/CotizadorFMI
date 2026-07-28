@@ -1,21 +1,22 @@
 import os
 import sys
+import importlib.util
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
-# Asegura que tanto la carpeta actual como la subcarpeta 'CotizadorFMI' esten en sys.path
-for p in [BASE_DIR, os.path.join(BASE_DIR, "CotizadorFMI")]:
-    if os.path.exists(p) and p not in sys.path:
-        sys.path.insert(0, p)
+app_path = os.path.join(BASE_DIR, "webapp", "app.py")
 
-try:
+if os.path.exists(app_path):
+    # Carga directamente el archivo webapp/app.py por ruta de archivo
+    spec = importlib.util.spec_from_file_location("webapp_app", app_path)
+    webapp_module = importlib.util.module_from_spec(spec)
+    sys.modules["webapp_app"] = webapp_module
+    spec.loader.exec_module(webapp_module)
+    app = webapp_module.app
+else:
     from webapp.app import app
-except ModuleNotFoundError:
-    try:
-        from CotizadorFMI.webapp.app import app
-    except ModuleNotFoundError:
-        import app as _app_module
-        app = _app_module.app
 
 if __name__ == "__main__":
     app.run()
